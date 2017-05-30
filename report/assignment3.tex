@@ -1,0 +1,364 @@
+\documentclass[hidelinks,english,conference]{IEEEtran}
+
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage[T1]{fontenc}
+\usepackage{babel}
+\usepackage{wrapfig}
+\usepackage{hyperref}
+\usepackage[acronyms]{glossaries}
+\usepackage{lettrine}
+\usepackage{substr}
+\usepackage{stringstrings}
+\usepackage{eucal}
+\usepackage{adjustbox}
+\usepackage{multirow}
+
+% \newglossaryentry{aco}{
+%     name=ACO,
+%     description={Ant Colony Optimization}
+% }
+
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+\newacronym{de}{DE}{Differential Evolution}
+\newacronym[plural={EAs}, firstplural={Evolutionary Algorithms (EAs)}]{ea}{EA}{Evolutionary Algorithm}
+\newacronym[plural={GAs}, firstplural={Genetic Algorithms (GAs)}]{ga}{GA}{Genetic Algorithm}
+\newacronym{deccd}{DECC-D}{Differential Evolution with Cooperative Co-evolution using Delta-Grouping}
+\newacronym{mlcc}{MLCC}{Multilevel Cooperative Coevolution}
+\newacronym{sansde}{SaNSDE}{Self-adaptive Differential Evolution with Neighborhood Search}
+
+\date{\today}
+
+\pagenumbering{arabic}
+
+% *** MATH PACKAGES ***
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\SetKwRepeat{Do}{do}{while}%
+
+\hyphenation{}
+\def\firstword{{\gls{de}}}
+
+\graphicspath{{Pictures/}}
+\begin{document}
+\title{Differential Evolution and Cooperative Evolution}
+\author{\IEEEauthorblockN{Armand Maree\\120 178 00}
+\IEEEauthorblockA{Department of Computer Science\\
+University of Pretoria\\}}
+\maketitle
+
+% \begin{abstract}
+
+% \end{abstract}
+
+\IEEEpeerreviewmaketitle
+
+\section{Introduction}
+	\lettrine{I}{n} the field of \glspl{ea}, \gls{de} is an optimization algorithm \cite{brest2006self}. It borrows concepts from biological evolution and natural selection to guide a population of individuals scattered across the search space to some optimal value. \gls{de} does not make any assumptions of the fitness landscape, like the gradient at any position.
+	
+\section{Background}
+	\gls{de} differs from most other \glspl{ea} in the manner in which cross over and mutation occurs.
+	
+	\subsection{DE Operators}
+		\subsubsection{Mutation}\label{section_mutation}
+			During the reproduction process a mutation operator is applied in order to introduce diversity in the population. This is done by randomly choosing two individuals $x_{i_2}$ and $x_{i_3}$ from the population and performing component wise addition to the vectors that represent the individuals. A scalar, $\beta$, called the scaling factor, is then multiplied to each component of the resulting vector. Component wise addition is then done between this and another individual, $x_{i_1}$, called the target vector. This processes is repeated for all $x \in \left[1,n\right]$, where $n$ is the number of individuals in the population. Equation \ref{equation_trial_calculation} \cite{engelbrecht2007computational}\cite{yang2007differential} shows this calculation. The result of this calculation, $u_i$, is called the trial vector and will be used in the cross over operation.
+			
+			\begin{equation}
+				\begin{split}
+				\textbf{u}(t)_i = \textbf{x}(t)_{i_1}  \oplus \beta(\textbf{x}(t)_{i_2} \ominus \textbf{x}(t)_{i_3})\\ 
+				\text{where}, \textbf{x}(t)_{i_1} \neq \textbf{x}(t)_{i_2} \neq \textbf{x}(t)_{i_3}
+				\end{split}
+				\label{equation_trial_calculation}
+			\end{equation}
+			
+		During this report the scaling factor, $\beta$, was chosen to be $0.5$. The reason for this is that a scaling factor larger than $0.5$ can result in some components of the trial vector to lie outside the search space.
+		
+		\subsubsection{Cross Over}\label{section_cross_over}
+			During the cross over process the trial vector, $u_i$, and target vector, $x_i$, is used to produce a new single individual as offspring. A set of cross over points, $\CMcal{J}$, is used to decide which elements of the offspring vector should be selected from the trial vector and which should be selected from the target vector. Algorithm \ref{algorithm_cross_over_set} \cite{engelbrecht2007computational} shows how to calculate the cross over set.
+		   \begin{algorithm}
+				\SetAlgoLined
+				\caption{Calculate Cross Over Set}\label{algorithm_cross_over_set}
+				$j^* \sim U(1,n_x)$\\
+				$\CMcal{J} \leftarrow \CMcal{J} \cap \lbrace j^* \rbrace$\\
+				
+				\ForEach{$j \in \lbrace 1,..,n_x \rbrace$}{
+					\If{$U(0,1) < p_r \text{ and } j \neq j^*$}{
+						$\CMcal{J} \leftarrow \CMcal{J} \cap \lbrace j \rbrace$
+					}
+				}
+			\end{algorithm}
+		
+		In algorithm \ref{algorithm_cross_over_set} the value $p_r$ is referred to as the cross over probability and was chosen to be $0.5$ for this report.
+
+	Once the cross over set has been found, the offspring, $\textbf{x}'_i$, is produced by using the cross over set to determine whether the a specific component is taken from the trial or the vector, by using equation \ref{equation_offspring}. This form of cross over is referred to as binomial cross over \cite{engelbrecht2007computational}.
+    \begin{align}\label{equation_offspring}
+    	x'_{ij}(t), \forall j \in \lbrace 1,..,n_x \rbrace = 
+        \begin{cases}
+          u_{ij}(t), & \text{if } j \in \CMcal{J}\\
+          x_{ij}(t), & \text{otherwise}
+        \end{cases}
+	\end{align}
+
+	\subsection{Cooperative DE}
+		Cooperative \gls{de} is an algorithm that splits the dimensions for the problem into a group of sub-populations in an attempt to break a large problem into a set of small problems. The splitting of the dimensions can happen in a variety of ways which will be discussed in the literature review (section \ref{section_literature_review}) and later in the implementation section (section \ref{section_implementation}) of this report.
+        
+\section{Literature Review}\label{section_literature_review}
+	Very often real world problems that has a large amount of dimensions are split into smaller more manageable problems \cite{dai2016cooperative}. A potential problem with the split in the dimensions is the possibility of placing dependent variables in different sub-problems which could lead to a failure in the \gls{ea} \cite{dai2016cooperative}. There has been various methods found to deal with the discovery and adaption of variable dependencies.
+    
+    One method to discover variable dependencies is the \gls{deccd} algorithm \cite{omidvar2010cooperative}. In this method variables are arranged in descending order of change. That is, the amount of change that a variable $j$ experiences between two consecutive iterations, $\bar{\delta}_j$, is used to sort the variables. Equation \ref{equation_delta} \cite{omidvar2010cooperative} is used to calculate the amount of change for each variable.
+    \begin{equation}
+      \begin{split}
+      \bar{\delta}_j = \frac{\sum^{n_x}_{j=1}\delta_{ji}}{n_x}\\ 
+      \text{where}, j \in \lbrace 1,..,n_x \rbrace\\
+      \text{and}, i \in \lbrace 1,..,numIndividuals \rbrace\\
+      \end{split}
+      \label{equation_delta}
+    \end{equation}
+    
+    Variables that experience a similar amount of change is then grouped together in subcomponents, which will then in turn be solved by a separate \gls{ea}. This method seems to be quite successful if only one group of dependent variables exist, about an 80\% success rate of grouping dependent variables \cite{dai2016cooperative}. This method does fail quite miserably when multiple groups of dependent variables exists \cite{dai2016cooperative}.
+    
+    Another technique proposed in \cite{yang2008multilevel} is called \gls{mlcc}. This technique utilizes a set of ``decomposers'' which specify how the objective vector is divided into sub-components. Each decomposer has a performance score associated with it. Every predetermined amount of iterations (called cycles), a decomposer from the set is chosen based on its performance score. After a number of iterations have passed, the performance score of the decomposer is assigned a new value which corresponds to the performance of the cycle that just ended. After this the selection process is dome again and the process is repeated.
+    
+    The \gls{mlcc} used in \cite{yang2008multilevel} was set up in such a way to use the \gls{sansde} proposed in \cite{yang2007differential} with group sizes $\textbf{S}= \lbrace 5, 10, 25, 50, 100 \rbrace$. The \gls{sansde} algorithm is very similar to the standard \gls{de}, except for the mutation operator which is replaced with equation \ref{equation_nsde_mutation} \cite{yang2007differential}. In this equation $N(0.5, 0.5)$ refers to a random number from the Gaussian distribution with a mean and standard deviation of $0.5$, and $\delta$ refers to a random number from the Cauchy distribution with a scale parameter of $t=1$ \cite{yang2007differential}.
+    
+    \begin{equation}
+      \begin{split}
+        \textbf{u}(t)_i = \textbf{x}(t)_{i_1} +          
+        \begin{cases}
+          \textbf{d}_{i}(t) \times N(0.5,0.5), & \text{if } U(0,1) < 0.5\\
+          \textbf{d}_{i}(t) \times \delta, & \text{otherwise}
+        \end{cases}\\ 
+        \text{where}, \textbf{x}(t)_{i_1} \neq \textbf{x}(t)_{i_2} \neq \textbf{x}(t)_{i_3}\\
+        \text{and}, \textbf{d}_{i}(t) = \textbf{x}(t)_{i_2} - \textbf{x}(t)_{i_3}
+      \end{split}
+      \label{equation_nsde_mutation}
+    \end{equation}
+    
+    The self-adaptive part of \gls{sansde} refers to its ability to self adjust parameters. It tunes the cross over probability, $p_o$, and the scaling factor, $\beta$, automatically during run time \cite{yang2007differential}.
+    
+    Based on the results obtained in \cite{yang2008multilevel}, the \gls{mlcc} performed quite well, although the newer \gls{deccd} obtained better results for most of the functions tested in \cite{omidvar2010cooperative}.
+    
+\section{Implementation}\label{section_implementation}
+	Each of the below implementations was executed 30 times and each execution was run for 5000 iterations. The results for the dimensions and functions tested is included in the ODF spreadsheet. Due to time constraints not all of the optimization functions could be tested and not all of the desired dimensions could be tested.
+
+	\subsection{DE/rand/1/bin} %1
+		The first implementation for this report was the simple DE/rand/1/bin. This implementation of \gls{de} uses random selection of parents, and performs binomial cross over (which is discussed in section \ref{section_cross_over}). The ``1'' in the name of this \gls{de} algorithm refers to the number of difference vectors used when creating the trial vector during the mutation process, this is the process described in section \ref{section_mutation}.
+
+		This \gls{de} form creates 30 individuals where each individual's size is equal to the number of dimensions that has to be solved. The algorithm then runs until 5000 iterations has been performed and returns the best individual.
+        
+    \subsection{Basic Cooperative DE}\label{section_basic_coop_de} %2
+    	Due to the \textit{curse-of-dimensionality} \cite{dai2016cooperative}, the more dimensions are added to a problem, the harder it is for an \gls{ea} to solve the problem\cite{yang2008multilevel}. The problem is thus split into more manageable smaller sub problems.
+        
+    	For this Basic Cooperative \gls{de} the number of dimensions were split into sub-populations of size $n_x \times k, k \in \left[ 0.0, 1.0 \right]$, where $k$ is the percentage of dimensions per sub-population. The values for $k$ that was tested was $k \in \lbrace 0.1, 0.3, 0.5 \rbrace$. Overlapping was not allowed, thus each component was only allowed to occur in one sub-population.
+
+		Each sub population was then given to a separate \gls{de} to optimize. Each \gls{de} was placed into their own thread in order to reduce run time. When the fitness of an individual was to be tested, it's components were swapped with a global best individual, called the context vector. If the context vector has a better fitness after the corresponding components were swapped in, then the context vector is updated, other wise it reverts to its old state. The context vector is thus always up to date with the best individual.
+        
+        This attempts to break the problem into collection of smaller problems which is easier to solve. But this introduces the problem that some variables depend on one another and placing them in two separate sub-populations can cause the algorithm to perform worse.
+		
+        The values that were tested are: $k \in \lbrace 0.1, 0.3, 0.5 \rbrace$.
+        
+		The best values for $k$ found for various different dimensions for the various optimization function can be found in table \ref{table_basic_de_k_value}.
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{4}{|c|}{Number of Dimensions} \\\cline{2-5}
+				 & 50 & 100 & 150 & 500 \\
+				\hline
+				Alpine & $k=0.1$ & $k=0.1$ & $k=0.1$ & $k=0.1$ \\
+				\hline
+				Eggholder & $k=0.1$ & $k=0.1$ & $k=0.1$ &  \\
+				\hline
+				Griewank & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Norwegian & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Rosenbrock & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Saloman & $k=0.5$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Schaffer6 & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Schwefel2.22 & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Shubert & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+				Vincent & $k=0.1$ & $k=0.1$ & $k=0.1$ & \\
+				\hline
+			\end{tabular}
+			\caption{$k$ values for basic cooperative DE}
+			\label{table_basic_de_k_value}
+		\end{table}
+
+	\subsection{Variable Dependency DE from Literature Review} %3
+		Unfortunately due to time constraints, this DE was not implemented.
+
+	\subsection{Random Grouping Cooperative DE}\label{section_random_de} %4
+		This algorithm was implemented in the same manner as the Basic Cooperative \gls{de} (section \ref{section_basic_coop_de}), with the difference coming in with now the components are assigned to various sub-populations. In the basic version, the $n_x \times k$ components are assigned to the first sub-population, the next $n_x \times k$ components are assigned to the second sub-population and so forth. This implementation randomly selects $n_x \times k$ components and assigns them to the first sub-population and then randomly choses the next $n_x \times k$ components and assigns them to the second sub-population. This is repeated until no components remain.
+        
+        The values that were tested are: $k \in \lbrace 0.1, 0.3, 0.5 \rbrace$.
+
+		This algorithm tries to overcome the potential problem that the previous \gls{de} has: dependent variables has to be side by side in the vectors in order for them to be potentially grouped together.
+
+		The best values for $k$ found for various different dimensions for the various optimization function can be found in table \ref{table_random_de_k_value}.
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Alpine & $k=0.3$ & $k=0.3$ & $k=0.3$ \\
+				\hline
+				Saloman & $k=0.1$ & $k=0.1$ & $k=0.3$ \\
+				\hline
+			\end{tabular}
+			\caption{$k$ values for random grouping DE}
+			\label{table_random_de_k_value}
+		\end{table}
+
+	\subsection{Random Grouping Cooperative DE with Overlap} %5
+		The implementation for this \gls{de} was the same as for the Random Grouping Cooperative \gls{de} in section \ref{section_random_de} with the only difference is that there exists a probability, $p_o$, that a component not included in the original allocation can now be included in this sub-population. Overlap of the sub-populations are thus now allowed.
+        
+        The values tested are: $k \in \lbrace 0.1, 0.3, 0.5 \rbrace, p_o \in \lbrace 0.05, 0.1, 0.2 \rbrace$.
+
+		The best values for $k$ and $p_o$ found for various different dimensions for the various optimization function can be found in table \ref{table_random_de_overlap_k_value}.
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Alpine & \specialcell{$k=0.3$\\$p_o=0.2$} & \specialcell{$k=0.1$\\$p_o=0.05$} & \specialcell{$k=0.1$\\$p_o=0.05$} \\
+				\hline
+				Salomon & \specialcell{$k=0.1$\\$p_o=0.2$} & \specialcell{$k=0.1$\\$p_o=0.05$} & \specialcell{$k=0.1$\\$p_o=0.05$} \\
+				\hline
+				Vincent & \specialcell{$k=0.3$\\$p_o=0.2$} & & \\
+				\hline
+			\end{tabular}
+			\caption{$k$ and $p_o$ values for random grouping DE (overlap)}
+			\label{table_random_de_overlap_k_value}
+		\end{table}
+
+	\subsection{Decomposition Cooperative DE}\label{section_decompose_coop_de} %6
+		This implementation, which is also called a \textit{divide-and-conquer} method \cite{dai2016cooperative}, requires that every $1 < t < maxIterations$ iterations the number of sub-populations are doubled. Initially the algorithm starts with only 1 sub-population which includes all the dimensions. After $t$ iterations there will be $2$ sub-populations and after $2t$ iterations there will be $4$ sub-populations. This process will be repeated until there is only 1 component per sub-population. Each sub-population will be optimized by its own \gls{de} and each \gls{de} will be executed in its own thread. Upon each population split, the components are randomly assigned to the various sub-populations, similar to what the Random Grouping Cooperative \gls{de} in section \ref{section_random_de} did.
+
+		The idea of this algorithm is to find a general location that proves to contain some optimal and then as time progress each component exploit their immediate surroundings with decreasing consideration for the potential of variable dependencies.
+        
+        A formula was used to ensure that the decomposition process reaches 1 component per sub-population at a specific iteration, $i_{target} \in \lbrace 3000, 4000, 5000 \rbrace$. The performance were evaluated separately for each of these target iterations. Equation \ref{equation_iteration_calculation} shows the formula used to calculate $t$.
+        	\begin{equation}
+				t = i_{target} \div \log_2 n_x
+				\label{equation_iteration_calculation}
+			\end{equation}
+
+		The best values for $t$ found for various different dimensions for the various optimization function can be found in table \ref{table_decomposition_t_value}. 
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Salomon & $t=885$ & $t=446$ & $t=401$ \\
+				\hline
+				Vincent && $t=334$ & \\
+				\hline
+			\end{tabular}
+			\caption{$t$ values for decomposition cooperative DE}
+			\label{table_decomposition_t_value}
+		\end{table}
+
+	\subsection{Decomposition Cooperative DE with Random Grouping} %7
+		This implementation is a combination between the Decomposition Cooperative \gls{de} (section \ref{section_decompose_coop_de}) and the Random Grouping Cooperative \gls{de} (section \ref{section_random_de}). The over all operation is the exact same as the Decomposition Cooperative \gls{de}, except that the components assigned to each sub-population is recalculated after every iteration instead of every time the sub-populations split.
+
+		The best values for $t$ found for various different dimensions for the various optimization function can be found in table \ref{table_decomposition_random_t_value}. 
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Alpine & $t=557$ & $t=557$ & $t=501$ \\
+				\hline
+			\end{tabular}
+			\caption{$t$ values for decomposition cooperative DE with random grouping}
+			\label{table_decomposition_random_t_value}
+		\end{table}
+
+	\subsection{Merging Cooperative DE}\label{section_merge_coop_de} %8
+		The Merging Cooperative \gls{de} is the opposite of the Decomposition Cooperative \gls{de} (section \ref{section_decompose_coop_de}). Where the Decomposition Cooperative \gls{de} starts with one sub-population that contains all the components and ends with one component per sub-population, the Merging Cooperative \gls{de} starts with $n_x$ sub-populations that each contains one component and every $t$ iterations the number of sub-populations are halved and the number of components per sub-populations are then doubled. This process is repeated until only one sub-population exists that contains all the dimensions. Other than this, the algorithm functions the same as the Decomposition Cooperative \gls{de}.
+
+		The idea of this algorithm is firstly to find a general good position for each component and then as time progress take more and more potential variable dependencies into account but creating larger sub-populations.
+        
+        A formula was used to ensure that the decomposition process reaches $n_x$ components per sub-population at a specific iteration, $i_{target} \in \lbrace 3000, 4000, 5000 \rbrace$. The performance was evaluated separately for each of these target iterations. Equation \ref{equation_iteration_calculation} shows the formula used to calculate $t$.
+
+		The best values for $t$ found for various different dimensions for the various optimization function can be found in table \ref{table_merge_t_value}. 
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Alpine & $t=885$ & $t=557$ & $t=501$ \\
+				\hline
+				Saloman & $t=885$ & $t=557$ & $t=$ \\
+				\hline
+				Vincent & $t=885$ & $t=334$ & $t=$ \\
+				\hline
+			\end{tabular}
+			\caption{$t$ values for merging cooperative DE}
+			\label{table_merge_t_value}
+		\end{table}
+
+	\subsection{Merging Cooperative DE with Random Grouping} %9
+		Lastly the Merging Cooperative \gls{de} that uses random grouping was implemented the exact same as the Merging Cooperative \gls{de} (section \ref{section_merge_coop_de}) except that the assignment of components to sub-populations was done on each iteration instead of each time the sub-populations merge. Other than this difference, the algorithms function in the same manner.
+
+		The best values for $t$ found for various different dimensions for the various optimization function can be found in table \ref{table_merge_random_t_value}. 
+
+		\begin{table}
+			\centering
+			\begin{tabular}{ | c | c | c | c | }
+				\hline
+				\multirow{2}{*}{Function Name} & \multicolumn{3}{|c|}{Number of Dimensions} \\\cline{2-4}
+				 & 50 & 500 & 1000\\
+				\hline
+				Alpine & $t=885$ & $t=557$ & $t=501$ \\
+				\hline
+				Saloman & $t=708$ & $t=446$ & $t=501$ \\
+				\hline
+				Vincent & $t=885$ & $t=557$ & \\
+				\hline
+			\end{tabular}
+			\caption{$t$ values for merging cooperative DE with random grouping}
+			\label{table_merge_random_t_value}
+		\end{table}
+        
+\section{Results}
+	The results for the parameters can be found in the implementation sectio (section \ref{section_implementation}) and the results for the algorithms can be found in the results spreadsheet.
+
+\section{Conclusion}
+	From the few experiments that were run, it is quite clear that the merge strategy produced the best results. This is shortly followed by the decomposition strategy.
+    
+    The results from this report is as expected and lines up with some of the research done in the field.
+    
+    Due to time constraints not a lot of functions could be optimized, especially since a stringer focus has been placed on the parameter tuning aspect of each algorithm.
+    
+    Some improvements to the speed of the optimization process were done near the end of this project, which would've allowed for more results if this have been done earlier. Unfortunately due to the large scope and limited time, an initial focus was placed on implementing all the algorithms first.	
+
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
+
+\end{document}

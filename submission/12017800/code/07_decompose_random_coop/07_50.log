@@ -1,0 +1,20 @@
+make clean
+make[1]: Entering directory '/home/armandmaree/TUKS/COS710/Assignment3/src/07_decompose_random_coop'
+rm -f *.class # deleting executable, .o’s and backups
+make[1]: Leaving directory '/home/armandmaree/TUKS/COS710/Assignment3/src/07_decompose_random_coop'
+make
+make[1]: Entering directory '/home/armandmaree/TUKS/COS710/Assignment3/src/07_decompose_random_coop'
+javac  *.java
+make[1]: Leaving directory '/home/armandmaree/TUKS/COS710/Assignment3/src/07_decompose_random_coop'
+date
+Tue May 30 22:49:48 SAST 2017
+make run
+make[1]: Entering directory '/home/armandmaree/TUKS/COS710/Assignment3/src/07_decompose_random_coop'
+java Main 50 true # executing the program
+[33mSTART HERE[0m
+Function: Alpine [-10.0,10.0]
+numDimensions: 50
+decomposeGenerations: 1000
+[32mRun #0[0m
+After 1000 generations, numInstances: 1 fitness: -2.319684096E9 numDimensionsPerInstance: 50.           After 2000 generations, numInstances: 2 fitness: -3.315114262396928E15 numDimensionsPerInstance: 25.           After 3000 generations, numInstances: 4 fitness: -2.9069204370803246E22 numDimensionsPerInstance: 12.           Makefile:16: recipe for target 'run' failed
+Makefile:19: recipe for target 'all' failed
